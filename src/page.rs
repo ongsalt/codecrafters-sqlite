@@ -1,4 +1,4 @@
-use crate::{btree::Cell, utils::DatabaseHeader};
+use crate::{cell::Cell, utils::DatabaseHeader};
 
 #[derive(Debug)]
 pub enum PageType {

@@ -21,8 +21,8 @@ pub enum RecordSerial {
 
 #[derive(Debug)]
 pub struct Record {
-    header_size: Varint,
-    content: Vec<RecordSerial>,
+    pub header_size: Varint,
+    pub content: Vec<RecordSerial>,
 }
 
 impl Record {
