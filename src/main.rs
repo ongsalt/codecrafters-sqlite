@@ -1,9 +1,8 @@
 use anyhow::{bail, Result};
 use nom::ToUsize;
-use page::{parse_schema_table_page};
+use page::parse_schema_table_page;
 use std::fs::File;
-use std::io::prelude::*;
-use std::os::windows::fs::FileExt;
+use std::io::{prelude::*, SeekFrom};
 use std::vec;
 use utils::DatabaseHeader;
 
@@ -23,7 +22,7 @@ fn main() -> Result<()> {
 
     // Parse command and act accordingly
     let command = &args[2];
-    
+
     match command.as_str() {
         ".dbinfo" => {
             let mut file: File = File::open(&args[1])?;
@@ -39,14 +38,14 @@ fn main() -> Result<()> {
 
             // table_schema is in the first page
             let mut first_page_buf: Vec<u8> = vec![0; page_size.to_usize()];
-            file.seek_read(&mut first_page_buf, 0)
+            file.seek(SeekFrom::Start(0));
+            file.read_exact(&mut first_page_buf)
                 .expect("this whould not failed here");
 
             // println!("[Header]: {:#?}", &db_header);
-            
+
             let cells = parse_schema_table_page(&first_page_buf, &db_header);
             println!("number of tables: {}", cells.len());
-
         }
         _ => bail!("Missing or invalid command passed: {}", command),
     }
