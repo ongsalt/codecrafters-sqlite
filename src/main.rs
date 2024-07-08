@@ -23,6 +23,7 @@ fn main() -> Result<()> {
 
     // Parse command and act accordingly
     let command = &args[2];
+    
     match command.as_str() {
         ".dbinfo" => {
             let mut file: File = File::open(&args[1])?;
