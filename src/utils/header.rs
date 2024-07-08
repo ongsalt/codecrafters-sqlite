@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Debug)]
 pub enum TextEncoding {
     UTF8 = 1,
@@ -10,6 +12,12 @@ pub struct SQLiteVersion {
     pub x: u8,
     pub y: u8,
     pub z: u8
+}
+
+impl Display for SQLiteVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.x, self.y, self.z)
+    }
 }
 
 impl SQLiteVersion {

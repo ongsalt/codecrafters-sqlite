@@ -19,9 +19,25 @@ pub struct PageHeader {
     pub page_number: Option<u32>,
 }
 
+pub struct Page<'a> {
+    header: PageHeader,
+    // cell_pointers: Vec<u16>,
+    // content: &'a [u8],
+    raw: &'a [u8],
+}
+
+impl<'a> Page<'a> {
+    pub fn from_bytes(buf: &'a [u8]) -> Page<'a> {
+        Page {
+            header: PageHeader::from_bytes(&buf),
+            raw: &buf
+        }
+    }
+}
+
 impl PageHeader {
-    pub fn from_bytes(header_buf: &[u8]) -> Self {
-        let kind: PageType = match &header_buf[0] {
+    pub fn from_bytes(page_buf: &[u8]) -> Self {
+        let kind: PageType = match &page_buf[0] {
             0x02 => PageType::InteriorIndex,
             0x05 => PageType::InteriorTable,
             0x0a => PageType::LeafIndex,
@@ -29,16 +45,16 @@ impl PageHeader {
             _ => panic!("Invalid Sqlite"),
         };
 
-        let first_freeblock = u16::from_be_bytes([header_buf[1], header_buf[2]]);
-        let number_of_cells = u16::from_be_bytes([header_buf[3], header_buf[4]]);
-        let first_cell_content = u16::from_be_bytes([header_buf[5], header_buf[6]]);
-        let fragmented_free_bytes = header_buf[7];
+        let first_freeblock = u16::from_be_bytes([page_buf[1], page_buf[2]]);
+        let number_of_cells = u16::from_be_bytes([page_buf[3], page_buf[4]]);
+        let first_cell_content = u16::from_be_bytes([page_buf[5], page_buf[6]]);
+        let fragmented_free_bytes = page_buf[7];
         let page_number = match kind {
             PageType::InteriorIndex | PageType::InteriorTable => Some(u32::from_be_bytes([
-                header_buf[8],
-                header_buf[9],
-                header_buf[10],
-                header_buf[11],
+                page_buf[8],
+                page_buf[9],
+                page_buf[10],
+                page_buf[11],
             ])),
             _ => None,
         };
@@ -55,20 +71,24 @@ impl PageHeader {
 }
 
 pub fn parse_schema_table_page(buf: &[u8], db_header: &DatabaseHeader) -> Vec<Cell> {
-    let header = PageHeader::from_bytes(&buf[100..]);
+    let header: PageHeader = PageHeader::from_bytes(&buf[100..]);
     let cell_pointer_array: Vec<u16> = parse_cell_pointer_array(&buf, &header, 100);
     // println!("Page header: {:#?}", &header);
     // println!("cell_pointer_array: {:#?}", cell_pointer_array);
 
-    let rows = cell_pointer_array.iter().map(|cell| Cell::from_bytes(&buf, cell.to_owned().into(), &header, db_header).unwrap()).collect();
+    let rows = cell_pointer_array
+        .iter()
+        .map(|cell: &u16| Cell::from_bytes(&buf, cell.to_owned().into(), &header, db_header).unwrap())
+        .collect();
     rows
 }
 
 pub fn parse_cell_pointer_array(buf: &[u8], header: &PageHeader, page_padding: usize) -> Vec<u16> {
-    let padding = page_padding + match &header.kind {
-        PageType::InteriorIndex | &PageType::InteriorTable => 12,
-        _ => 8,
-    };
+    let padding = page_padding
+        + match &header.kind {
+            PageType::InteriorIndex | &PageType::InteriorTable => 12,
+            _ => 8,
+        };
 
     let mut out = Vec::<u16>::new();
     for i in 0..(header.number_of_cells as usize) {

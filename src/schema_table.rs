@@ -3,6 +3,7 @@ use crate::{
     record::{Record, RecordSerial},
 };
 
+#[derive(Debug)]
 pub struct Schema {
     pub kind: String,
     pub name: String,

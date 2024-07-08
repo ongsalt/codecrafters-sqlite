@@ -51,6 +51,7 @@ fn main() -> Result<()> {
 
             let cells = parse_schema_table_page(&first_page_buf, &db_header);
             println!("number of tables: {}", cells.len());
+            // println!("[Cells]: {:#?}", cells);
         }
         ".tables" => {
             let mut file: File = File::open(&args[1])?;
@@ -65,12 +66,11 @@ fn main() -> Result<()> {
                 .expect("this whould not failed here");
 
             let cells: Vec<Cell> = parse_schema_table_page(&first_page_buf, &db_header);
-            let table_names = cells
-                .iter()
-                .map(|it| Schema::from_cell(it).unwrap().name)
-                .filter(|it| it != "sqlite_sequence")
-                .join(" ");
-            println!("{}", table_names);
+            let schemas = cells.iter().map(|it| Schema::from_cell(it).unwrap());
+            println!("{:#?}", schemas.collect_vec());
+            
+            // let table_names = schemas.map(|it| it.name).filter(|it| it != "sqlite_sequence").join(" ");
+            // println!("{}", table_names);
         }
         _ => bail!("Missing or invalid command passed: {}", command),
     }
