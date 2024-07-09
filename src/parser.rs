@@ -34,7 +34,7 @@ peg::parser! {
         pub rule count() -> Command
             = "SELECT" _ "COUNT(*)" _ "FROM" _ table_name:name() { Command::Count { table_name, conditions: vec![] } }
         pub rule select() -> Command
-            = "SELECT" _ column_names:(name() ** (_* ",")) _ "FROM" _ table_name:name() { Command::Select { table_name, column_names, conditions: vec![] } }
+            = "SELECT" _ column_names:(name() ** (_* "," _*)) _ "FROM" _ table_name:name() { Command::Select { table_name, column_names, conditions: vec![] } }
         pub rule select_all() -> Command
             = "SELECT" _ "*" _ "FROM" _ table_name:name() { Command::SelectAll { table_name, conditions: vec![] } }
         pub rule create_table() -> Vec<String>
@@ -115,7 +115,7 @@ pub fn execute(command: &str, db: &mut SqliteFile) -> Result<()> {
                         .iter()
                         .find_position(|it| *it == name)
                         .map(|(i, _)| i)
-                        .ok_or(anyhow!("column(s) not exists"))
+                        .ok_or(anyhow!("column {name} not exists"))
                 })
                 .try_collect()?;
 
