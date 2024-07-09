@@ -19,6 +19,7 @@ pub struct PageHeader {
     pub page_number: Option<u32>,
 }
 
+#[derive(Debug)]
 pub struct Page {
     pub header: PageHeader,
     pub cell_pointers: Vec<u16>,

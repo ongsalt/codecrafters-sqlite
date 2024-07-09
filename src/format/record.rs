@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use itertools::Itertools;
 
 use super::{DatabaseHeader, TextEncoding};
@@ -19,6 +21,26 @@ pub enum RecordSerial {
     Reserved2,
     Blob(Vec<u8>),
     String(String),
+}
+
+impl Display for RecordSerial {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Null => write!(f, "Null"),
+            Self::I8(i) => write!(f, "{i}"),
+            Self::I16(i) => write!(f, "{i}"),
+            Self::I24(i) | Self::I32(i) => write!(f, "{i}"),
+            Self::I48(i) | Self::I64(i)=> write!(f, "{i}"),
+            Self::F64(i) => write!(f, "{i}"),
+            Self::Zero => write!(f, "0"),
+            Self::One => write!(f, "1"),
+            Self::Reserved1 => write!(f, "Reserved (1)"),
+            Self::Reserved2 => write!(f, "Reserved (2)"),
+            // TODO: check out how to this correctly
+            Self::Blob(b) => write!(f, "{}", b.escape_ascii()),
+            Self::String(s) => write!(f, "{s}"),
+        }
+    }
 }
 
 #[derive(Debug)]
