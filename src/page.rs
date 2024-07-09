@@ -19,19 +19,56 @@ pub struct PageHeader {
     pub page_number: Option<u32>,
 }
 
-pub struct Page<'a> {
-    header: PageHeader,
-    // cell_pointers: Vec<u16>,
-    // content: &'a [u8],
-    raw: &'a [u8],
+pub struct Page {
+    pub header: PageHeader,
+    pub cell_pointers: Vec<u16>,
+     // content: &'a [u8],
+    // pub raw: &'a [u8],
+    pub cells: Vec<Cell>,
 }
 
-impl<'a> Page<'a> {
-    pub fn from_bytes(buf: &'a [u8]) -> Page<'a> {
+impl Page {
+    pub fn from_bytes(buf: &[u8], db_header: &DatabaseHeader) -> Page {
+        Page::from_bytes_with_padding(&buf, db_header, 0)
+    }
+
+    pub fn from_bytes_with_padding(
+        buf: &[u8],
+        db_header: &DatabaseHeader,
+        padding: usize,
+    ) -> Page {
+        let header = PageHeader::from_bytes(&buf[padding..]);
+        let cell_pointers = Page::parse_cell_pointer_array(&buf, &header, padding);
+        let cells = cell_pointers
+            .iter()
+            .map(|cell: &u16| {
+                Cell::from_bytes(&buf, cell.to_owned().into(), &header, db_header).unwrap()
+            })
+            .collect();
+
         Page {
-            header: PageHeader::from_bytes(&buf),
-            raw: &buf
+            header,
+            cell_pointers,
+            // raw: &buf,
+            cells
         }
+    }
+
+    fn parse_cell_pointer_array(buf: &[u8], header: &PageHeader, page_padding: usize) -> Vec<u16> {
+        let padding = page_padding
+            + match &header.kind {
+                PageType::InteriorIndex | &PageType::InteriorTable => 12,
+                _ => 8,
+            };
+
+        let mut out = Vec::<u16>::new();
+        for i in 0..(header.number_of_cells as usize) {
+            out.push(u16::from_be_bytes([
+                buf[i * 2 + padding],
+                buf[i * 2 + 1 + padding],
+            ]));
+        }
+        out
     }
 }
 
@@ -68,34 +105,4 @@ impl PageHeader {
             page_number,
         }
     }
-}
-
-pub fn parse_schema_table_page(buf: &[u8], db_header: &DatabaseHeader) -> Vec<Cell> {
-    let header: PageHeader = PageHeader::from_bytes(&buf[100..]);
-    let cell_pointer_array: Vec<u16> = parse_cell_pointer_array(&buf, &header, 100);
-    // println!("Page header: {:#?}", &header);
-    // println!("cell_pointer_array: {:#?}", cell_pointer_array);
-
-    let rows = cell_pointer_array
-        .iter()
-        .map(|cell: &u16| Cell::from_bytes(&buf, cell.to_owned().into(), &header, db_header).unwrap())
-        .collect();
-    rows
-}
-
-pub fn parse_cell_pointer_array(buf: &[u8], header: &PageHeader, page_padding: usize) -> Vec<u16> {
-    let padding = page_padding
-        + match &header.kind {
-            PageType::InteriorIndex | &PageType::InteriorTable => 12,
-            _ => 8,
-        };
-
-    let mut out = Vec::<u16>::new();
-    for i in 0..(header.number_of_cells as usize) {
-        out.push(u16::from_be_bytes([
-            buf[i * 2 + padding],
-            buf[i * 2 + 1 + padding],
-        ]));
-    }
-    out
 }

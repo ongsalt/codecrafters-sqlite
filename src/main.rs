@@ -1,20 +1,21 @@
 use anyhow::{bail, Result};
 use itertools::Itertools;
 use nom::ToUsize;
-use page::parse_schema_table_page;
-use schema_table::Schema;
+use page::Page;
+use sqlite_file::SqliteFile;
 use std::fs::File;
 use std::io::{prelude::*, SeekFrom};
 use std::vec;
-use utils::DatabaseHeader;
+use table::Table;
+use utils::{DatabaseHeader, SQLiteVersion};
 
 mod cell;
 mod page;
 mod record;
-mod schema_table;
+mod sql_parser;
+mod sqlite_file;
+mod table;
 mod utils;
-
-use cell::Cell;
 
 fn main() -> Result<()> {
     // Parse arguments
@@ -30,49 +31,38 @@ fn main() -> Result<()> {
 
     match command.as_str() {
         ".dbinfo" => {
-            let mut file: File = File::open(&args[1])?;
-            let mut header: [u8; 100] = [0; 100];
-            file.read_exact(&mut header)?;
+            let mut file = SqliteFile::open(&args[1])?;
 
-            let db_header = DatabaseHeader::from_bytes(&header);
-            // The page size is stored at the 16th byte offset, using 2 bytes in big-endian order
-            #[allow(unused_variables)]
-            let page_size: u16 = u16::from_be_bytes([header[16], header[17]]);
-
-            println!("database page size: {}", page_size);
-
-            // table_schema is in the first page
-            let mut first_page_buf: Vec<u8> = vec![0; page_size.to_usize()];
-            file.seek(SeekFrom::Start(0)).unwrap();
-            file.read_exact(&mut first_page_buf)
-                .expect("this whould not failed here");
-
-            // println!("[Header]: {:#?}", &db_header);
-
-            let cells = parse_schema_table_page(&first_page_buf, &db_header);
-            println!("number of tables: {}", cells.len());
-            // println!("[Cells]: {:#?}", cells);
+            match file.read_page(1) {
+                Ok(page) => match Table::from_page(&page) {
+                    Ok(tables) => println!("number of tables: {}", tables.len()),
+                    Err(e) => println!("failed: {}", e),
+                },
+                Err(e) => println!("failed: {}", e),
+            }
         }
         ".tables" => {
-            let mut file: File = File::open(&args[1])?;
-            let mut header: [u8; 100] = [0; 100];
-            file.read_exact(&mut header)?;
+            let mut file = SqliteFile::open(&args[1])?;
 
-            let db_header = DatabaseHeader::from_bytes(&header);
-
-            let mut first_page_buf: Vec<u8> = vec![0; db_header.page_size.to_usize()];
-            file.seek(SeekFrom::Start(0)).unwrap();
-            file.read_exact(&mut first_page_buf)
-                .expect("this whould not failed here");
-
-            let cells: Vec<Cell> = parse_schema_table_page(&first_page_buf, &db_header);
-            let schemas = cells.iter().map(|it| Schema::from_cell(it).unwrap());
-            println!("{:#?}", schemas.collect_vec());
-            
-            // let table_names = schemas.map(|it| it.name).filter(|it| it != "sqlite_sequence").join(" ");
-            // println!("{}", table_names);
+            match file.read_page(1) {
+                Ok(page) => match Table::from_page(&page) {
+                    Ok(tables) => println!("{:#?}", tables.iter().map(|it| &it.name).collect_vec()),
+                    Err(e) => println!("failed: {}", e),
+                },
+                Err(e) => println!("failed: {}", e),
+            }
         }
-        _ => bail!("Missing or invalid command passed: {}", command),
+        other => {
+            let lenght = other.len();
+            if lenght > 1 && other.starts_with('"') && other.ends_with('"') {
+                // if it's "quoted" -> send to sql parser
+                let mut file = SqliteFile::open(&args[1])?;
+
+                &other[1..lenght - 2];
+            } else {
+                bail!("Missing or invalid command passed: {}", command);
+            }
+        }
     }
 
     Ok(())
