@@ -1,8 +1,6 @@
-use crate::{
-    page::{PageHeader, PageType},
-    record::Record,
-    utils::{DatabaseHeader, Varint},
-};
+use crate::utils::Varint;
+
+use super::{DatabaseHeader, PageHeader, PageType, Record};
 
 #[derive(Debug)]
 pub enum Cell {

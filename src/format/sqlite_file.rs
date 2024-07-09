@@ -5,7 +5,7 @@ use std::{
 
 use nom::ToUsize;
 
-use crate::{page::Page, utils::DatabaseHeader};
+use super::{DatabaseHeader, Page};
 
 pub struct SqliteFile {
     file: File,

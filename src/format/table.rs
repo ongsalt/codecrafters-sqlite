@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::{
+use super::{
     cell::Cell,
     page::Page,
     record::{Record, RecordSerial},

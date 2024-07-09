@@ -1,20 +1,9 @@
 use anyhow::{bail, Result};
+use format::{SqliteFile, Table};
 use itertools::Itertools;
-use nom::ToUsize;
-use page::Page;
-use sqlite_file::SqliteFile;
-use std::fs::File;
-use std::io::{prelude::*, SeekFrom};
-use std::vec;
-use table::Table;
-use utils::{DatabaseHeader, SQLiteVersion};
 
-mod cell;
-mod page;
-mod record;
 mod sql_parser;
-mod sqlite_file;
-mod table;
+mod format;
 mod utils;
 
 fn main() -> Result<()> {
@@ -46,7 +35,7 @@ fn main() -> Result<()> {
 
             match file.read_page(1) {
                 Ok(page) => match Table::from_page(&page) {
-                    Ok(tables) => println!("{:#?}", tables.iter().map(|it| &it.name).collect_vec()),
+                    Ok(tables) => println!("{:#?}", tables.iter().map(|it| &it.name).join(" ")),
                     Err(e) => println!("failed: {}", e),
                 },
                 Err(e) => println!("failed: {}", e),

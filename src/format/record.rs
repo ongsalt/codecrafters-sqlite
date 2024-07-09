@@ -1,6 +1,8 @@
 use itertools::Itertools;
 
-use crate::utils::{DatabaseHeader, TextEncoding, Varint};
+use super::{DatabaseHeader, TextEncoding};
+use crate::utils::Varint;
+
 #[derive(Debug)]
 pub enum RecordSerial {
     Null,
