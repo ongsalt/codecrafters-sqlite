@@ -87,7 +87,7 @@ pub fn execute(command: &str, db: &mut SqliteFile) -> Result<()> {
                 // .filter()
                 .map(|cell| match cell {
                     Cell::LeafTable { payload, .. } => {
-                        payload.content.iter().map(|it| it.to_string()).join(", ")
+                        payload.content.iter().map(|it| it.to_string()).join("|")
                     }
                     _ => todo!(),
                 })
@@ -128,7 +128,7 @@ pub fn execute(command: &str, db: &mut SqliteFile) -> Result<()> {
                     Cell::LeafTable { payload, .. } => column_indexes
                         .iter()
                         .map(|i| payload.content[*i].to_string())
-                        .join(", "),
+                        .join("|"),
                     _ => todo!(),
                 })
                 .join("\n");
